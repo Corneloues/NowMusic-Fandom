@@ -6,6 +6,10 @@ This project implements a robust HTML content fetcher in PowerShell with compreh
 
 ## Features
 - Fetch HTML content from any URL using `Invoke-WebRequest`
+- **Extract specific div elements** from HTML using configurable class selectors
+  - Handles nested divs correctly
+  - Supports multiple CSS classes in any order
+  - Robust regex-based parsing for real-world HTML
 - Configurable timeout settings
 - Robust error handling for:
   - Network timeouts
@@ -13,9 +17,11 @@ This project implements a robust HTML content fetcher in PowerShell with compreh
   - Invalid URLs
   - Empty content
   - Connection failures
+  - Missing or malformed HTML elements
 - Environment variable configuration support
 - Comprehensive logging with multiple severity levels
 - Command-line parameter support
+- Extensive test coverage with unit and integration tests
 
 ## Usage
 
@@ -56,11 +62,19 @@ pwsh -File Fetch-HtmlContent.ps1
 ## Scripts
 
 ### Fetch-HtmlContent.ps1
-Main script that fetches HTML content from a specified URL.
+Main script that fetches HTML content from a specified URL and can extract specific content divs.
 
 **Configuration:**
 - `SOURCE_URL` (env var or parameter): The URL to fetch content from
 - `TIMEOUT_SECONDS` (env var or parameter): HTTP request timeout in seconds (default: 30)
+- `TARGET_DIV_CLASS` (env var or parameter): CSS class of the div to extract (default: "mw-content-ltr mw-parser-output")
+
+**Functions:**
+- `Get-HtmlContent`: Fetches raw HTML content from a URL with comprehensive error handling
+- `Get-TargetDiv`: Extracts a specific div from HTML based on class selector
+  - Handles nested divs correctly
+  - Supports multiple class names in any order
+  - Robust error handling for missing elements and malformed HTML
 
 **Exit Codes:**
 - `0`: Success - content fetched successfully
@@ -70,6 +84,22 @@ Main script that fetches HTML content from a specified URL.
 - Detailed logs with timestamps and severity levels
 - Preview of fetched content (first 500 characters)
 - Content length and HTTP status code
+
+### Test-TargetDivExtraction.ps1
+Comprehensive unit tests for the `Get-TargetDiv` function:
+- Tests successful extraction with single and multiple classes
+- Tests nested div handling
+- Tests error handling for missing divs
+- Tests malformed HTML handling
+- Tests real-world Wikipedia HTML structures
+- 11 test cases covering all edge cases
+
+### Test-Integration.ps1
+Integration tests that demonstrate end-to-end functionality:
+- Fetches HTML from a live URL (requires internet)
+- Extracts target div from fetched content
+- Validates extracted content correctness
+- Includes offline tests with sample HTML
 
 ### .github/workflows/fetch-html.yml
 GitHub Actions workflow that automates the execution of Fetch-HtmlContent.ps1. Features:
@@ -90,13 +120,15 @@ Demonstration script that runs multiple test scenarios including:
 ### Validate-Implementation.ps1
 Validation script that checks the implementation for:
 - Correct PowerShell syntax
-- Required functions
+- Required functions (Write-Log, Get-HtmlContent, Get-TargetDiv)
 - Error handling implementation
 - Environment variable support
 - URL validation
 - Content validation
 - Status code handling
 - Logging functionality
+- TARGET_DIV_CLASS configuration
+- HTML parsing and div extraction capabilities
 
 ## Error Handling
 The script handles various error scenarios:

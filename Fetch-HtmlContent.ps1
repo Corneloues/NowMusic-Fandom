@@ -416,14 +416,36 @@ try {
         Write-Log "Status Code: $($result.StatusCode)" -Level Success
         Write-Log "Content Length: $($result.Content.Length) characters" -Level Success
         
-        # Display first 500 characters as preview
-        Write-Log "`n--- Content Preview (first 500 characters) ---" -Level Info
-        $preview = $result.Content.Substring(0, [Math]::Min(500, $result.Content.Length))
-        Write-Host $preview
-        Write-Log "--- End Preview ---`n" -Level Info
+        # Extract target div from the fetched HTML
+        Write-Log "`n=== Extracting Target Div ===" -Level Info
+        $divResult = Get-TargetDiv -HtmlContent $result.Content -TargetDivClass $TargetDivClass
         
-        # Return success exit code
-        exit 0
+        if ($divResult.Success) {
+            Write-Log "Successfully extracted target div!" -Level Success
+            Write-Log "Extracted Content Length: $($divResult.Content.Length) characters" -Level Success
+            
+            # Display first 500 characters of extracted content as preview
+            Write-Log "`n--- Extracted Content Preview (first 500 characters) ---" -Level Info
+            $preview = $divResult.Content.Substring(0, [Math]::Min(500, $divResult.Content.Length))
+            Write-Host $preview
+            Write-Log "--- End Preview ---`n" -Level Info
+            
+            # Return success exit code
+            exit 0
+        } else {
+            Write-Log "Failed to extract target div" -Level Error
+            Write-Log "Error: $($divResult.Error)" -Level Error
+            Write-Log "Falling back to full HTML content preview" -Level Warning
+            
+            # Display first 500 characters of full HTML as fallback
+            Write-Log "`n--- Full HTML Content Preview (first 500 characters) ---" -Level Info
+            $preview = $result.Content.Substring(0, [Math]::Min(500, $result.Content.Length))
+            Write-Host $preview
+            Write-Log "--- End Preview ---`n" -Level Info
+            
+            # Return error exit code since div extraction failed
+            exit 1
+        }
         
     } else {
         Write-Log "Failed to fetch HTML content" -Level Error

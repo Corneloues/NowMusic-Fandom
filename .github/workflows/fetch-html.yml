@@ -43,7 +43,7 @@ jobs:
           SOURCE_URL: ${{ github.event.inputs.source_url || vars.SOURCE_URL || 'https://en.wikipedia.org/wiki/Music' }}
           TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || vars.TIMEOUT_SECONDS || '30' }}
         run: |
-          pwsh -File Fetch-HtmlContent.ps1
+          ./Fetch-HtmlContent.ps1
       
       - name: Workflow Summary
         if: always()
@@ -51,5 +51,4 @@ jobs:
         run: |
           Write-Host "`n=== Workflow Execution Summary ===" -ForegroundColor Magenta
           Write-Host "This workflow demonstrates the Fetch-HtmlContent.ps1 script" -ForegroundColor Cyan
-          Write-Host "Status: ${{ job.status }}" -ForegroundColor $(if ("${{ job.status }}" -eq "success") { "Green" } else { "Red" })
           Write-Host "See the 'Fetch HTML Content' step above for detailed output" -ForegroundColor Cyan

@@ -19,7 +19,20 @@ This project implements a robust HTML content fetcher in PowerShell with compreh
 
 ## Usage
 
-### Using Environment Variables (Recommended for GitHub Actions)
+### GitHub Actions Workflow (Recommended)
+This repository includes a ready-to-use GitHub Actions workflow that runs the HTML fetcher automatically. The workflow can be:
+- **Manually triggered** via the Actions tab with custom URL and timeout parameters
+- **Automatically triggered** on pushes and pull requests to the main branch
+
+The workflow uses repository variables `SOURCE_URL` and `TIMEOUT_SECONDS` by default, with fallback to sensible defaults (Wikipedia Music page, 30 second timeout).
+
+To run manually:
+1. Go to the "Actions" tab in GitHub
+2. Select "Fetch HTML Content" workflow
+3. Click "Run workflow"
+4. Optionally provide custom URL and timeout values
+
+### Using Environment Variables (For Local Testing)
 ```bash
 export SOURCE_URL="https://example.com"
 export TIMEOUT_SECONDS=30
@@ -31,7 +44,7 @@ pwsh -File Fetch-HtmlContent.ps1
 .\Fetch-HtmlContent.ps1 -SourceUrl "https://example.com" -TimeoutSeconds 30
 ```
 
-### In GitHub Actions
+### In Custom GitHub Actions
 ```yaml
 - name: Fetch HTML Content
   env:
@@ -57,6 +70,14 @@ Main script that fetches HTML content from a specified URL.
 - Detailed logs with timestamps and severity levels
 - Preview of fetched content (first 500 characters)
 - Content length and HTTP status code
+
+### .github/workflows/fetch-html.yml
+GitHub Actions workflow that automates the execution of Fetch-HtmlContent.ps1. Features:
+- **Manual trigger** with customizable URL and timeout inputs
+- **Automatic triggers** on push/PR to main branch
+- Uses repository variables or sensible defaults
+- No local PowerShell installation required
+- Demonstrates the script in a CI/CD environment
 
 ### Demo-FetchHtml.ps1
 Demonstration script that runs multiple test scenarios including:

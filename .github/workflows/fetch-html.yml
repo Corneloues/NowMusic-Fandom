@@ -1,0 +1,56 @@
+name: Fetch HTML Content
+
+on:
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      source_url:
+        description: 'URL to fetch HTML content from'
+        required: false
+        default: 'https://en.wikipedia.org/wiki/Music'
+      timeout_seconds:
+        description: 'Timeout in seconds for the HTTP request'
+        required: false
+        default: '30'
+  
+  # Trigger on push to main branch
+  push:
+    branches:
+      - main
+  
+  # Trigger on pull requests
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  fetch-html:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup PowerShell
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)" -ForegroundColor Cyan
+          Write-Host "OS: $($PSVersionTable.OS)" -ForegroundColor Cyan
+      
+      - name: Fetch HTML Content
+        shell: pwsh
+        env:
+          SOURCE_URL: ${{ github.event.inputs.source_url || vars.SOURCE_URL || 'https://en.wikipedia.org/wiki/Music' }}
+          TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || vars.TIMEOUT_SECONDS || '30' }}
+        run: |
+          ./Fetch-HtmlContent.ps1
+      
+      - name: Workflow Summary
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "`n=== Workflow Execution Summary ===" -ForegroundColor Magenta
+          Write-Host "This workflow demonstrates the Fetch-HtmlContent.ps1 script" -ForegroundColor Cyan
+          Write-Host "See the 'Fetch HTML Content' step above for detailed output" -ForegroundColor Cyan

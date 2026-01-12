@@ -344,6 +344,30 @@ Test-Case -TestName "Real-world Wikipedia-style HTML structure" -ShouldSucceed $
     return $result
 }
 
+# Test 12: Handle div tags without space after tag name (edge case)
+Test-Case -TestName "Handle div tags without space (e.g., <div>)" -ShouldSucceed $true -TestCode {
+    $html = @"
+<!DOCTYPE html>
+<html>
+<body>
+    <div>Other content</div>
+    <div class="mw-content-ltr mw-parser-output">
+        <p>Target content</p>
+        <div>Nested without space</div>
+    </div>
+</body>
+</html>
+"@
+    
+    $result = Get-TargetDiv -HtmlContent $html -TargetDivClass "mw-content-ltr mw-parser-output"
+    
+    if ($result.Success -and $result.Content -match "Target content") {
+        Write-Host "  Successfully handled divs without space after tag name" -ForegroundColor Gray
+    }
+    
+    return $result
+}
+
 # Summary
 Write-Host "`n========================================" -ForegroundColor Magenta
 Write-Host "  TEST SUMMARY" -ForegroundColor Magenta

@@ -240,12 +240,22 @@ function Get-TargetDiv {
         
         # Build a regex pattern that matches a div with all specified classes
         # This pattern allows classes in any order and additional classes
+        # Example: For "mw-content-ltr mw-parser-output", it creates:
+        # (?=.*\bmw-content-ltr\b)(?=.*\bmw-parser-output\b).*?
         $classPatterns = $escapedClasses | ForEach-Object { "(?=.*\b$_\b)" }
         $classPattern = ($classPatterns -join '') + '.*?'
         
         # Pattern to match the opening div tag with the target classes
-        # This matches: <div class="..." where the class attribute contains all target classes
-        $openDivPattern = '<div\s+' + '[^>]*' + 'class\s*=\s*' + '["' + "']" + $classPattern + '["' + "']" + '[^>]*>'
+        # Matches: <div class="..." where class attribute contains all target classes
+        # Using verbose construction for clarity
+        $divTag = '<div'
+        $whitespace = '\s+'
+        $anyAttrs = '[^>]*'
+        $classAttr = 'class\s*=\s*'
+        $quote = '["' + "']"  # Matches both " and '
+        $endTag = '>'
+        
+        $openDivPattern = $divTag + $whitespace + $anyAttrs + $classAttr + $quote + $classPattern + $quote + $anyAttrs + $endTag
         
         Write-Log "Searching for div with regex pattern" -Level Info
         
@@ -275,7 +285,31 @@ function Get-TargetDiv {
         # Scan through the HTML to find the matching closing tag
         while ($currentPos -lt $HtmlContent.Length -and $divCount -gt 0) {
             # Look for next div tag (opening or closing)
-            $nextOpenDiv = $HtmlContent.IndexOf('<div', $currentPos, [System.StringComparison]::OrdinalIgnoreCase)
+            # Opening divs can be: <div>, <div , <div\t, <div\n, <div>
+            # We need to find '<div' followed by whitespace, '>', or another attribute character
+            $nextOpenDiv = -1
+            $searchPos = $currentPos
+            while ($searchPos -lt $HtmlContent.Length) {
+                $tempPos = $HtmlContent.IndexOf('<div', $searchPos, [System.StringComparison]::OrdinalIgnoreCase)
+                if ($tempPos -eq -1) {
+                    break
+                }
+                # Check if the next character after '<div' is valid (whitespace, '>', or end of string)
+                if ($tempPos + 4 -ge $HtmlContent.Length) {
+                    # End of content, this is valid
+                    $nextOpenDiv = $tempPos
+                    break
+                }
+                $nextChar = $HtmlContent[$tempPos + 4]
+                if ($nextChar -match '[\s>]') {
+                    # Valid opening div tag
+                    $nextOpenDiv = $tempPos
+                    break
+                }
+                # Not a valid div tag, continue searching
+                $searchPos = $tempPos + 4
+            }
+            
             $nextCloseDiv = $HtmlContent.IndexOf('</div>', $currentPos, [System.StringComparison]::OrdinalIgnoreCase)
             
             # If no more closing divs found, the HTML is malformed

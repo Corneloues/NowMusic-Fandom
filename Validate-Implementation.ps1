@@ -123,14 +123,15 @@ Write-Host "`nTest 10: Checking for comprehensive logging..." -ForegroundColor C
 $logLevels = @('Info', 'Warning', 'Error', 'Success')
 $foundLevels = 0
 foreach ($level in $logLevels) {
-    if ($scriptContent -match [regex]::Escape("-Level $level")) {
+    # Match both parameter style and value assignment style
+    if ($scriptContent -match "-Level\s+$level|'\s*$level\s*'") {
         $foundLevels++
     }
 }
 if ($foundLevels -ge 3) {
     Write-Host "  ✓ Multiple log levels used ($foundLevels/$($logLevels.Count))" -ForegroundColor Green
 } else {
-    Write-Host "  ⚠ Limited logging implementation" -ForegroundColor Yellow
+    Write-Host "  ⚠ Limited logging implementation ($foundLevels/$($logLevels.Count) detected)" -ForegroundColor Yellow
 }
 
 # Test 11: Test parameter support

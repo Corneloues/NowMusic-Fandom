@@ -132,9 +132,10 @@ function Get-HtmlContent {
         
         Write-Log "Content received successfully. Size: $($content.Length) characters" -Level Success
         
-        # Additional validation - check if it looks like HTML
-        if ($content -notmatch '<html|<!DOCTYPE|<body|<head') {
-            Write-Log "Warning: Content does not appear to be HTML" -Level Warning
+        # Additional validation - check if it looks like HTML (optional validation)
+        # Note: This is a heuristic check and may not catch all valid HTML documents
+        if ($content -notmatch '(?i)(<html|<!DOCTYPE|<body|<head|<?xml)') {
+            Write-Log "Warning: Content may not be HTML (no standard HTML tags detected)" -Level Warning
         }
         
         $result.Success = $true

@@ -99,8 +99,10 @@ $testResults += Run-Test `
     -ExpectSuccess $true
 
 # Test 5: 404 Not Found
+# Note: This test depends on the external service httpstat.us
+# In environments without internet access, this test will fail
 $testResults += Run-Test `
-    -TestName "Test 5: 404 Not Found error" `
+    -TestName "Test 5: 404 Not Found error (requires internet)" `
     -Url "https://httpstat.us/404" `
     -Timeout 30 `
     -ExpectSuccess $false

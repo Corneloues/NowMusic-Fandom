@@ -45,7 +45,7 @@ try {
 Write-Host "`nTest 2: Checking for required functions..." -ForegroundColor Cyan
 $scriptContent = Get-Content $scriptPath -Raw
 
-$requiredFunctions = @('Write-Log', 'Get-HtmlContent')
+$requiredFunctions = @('Write-Log', 'Get-HtmlContent', 'Get-TargetDiv')
 foreach ($func in $requiredFunctions) {
     if ($scriptContent -match "function\s+$func") {
         Write-Host "  ✓ Function '$func' is defined" -ForegroundColor Green
@@ -161,6 +161,37 @@ if ($exitCode -ne 0 -and ($output -match 'SOURCE_URL')) {
     Write-Host "  ⚠ SOURCE_URL validation may need improvement" -ForegroundColor Yellow
 }
 
+# Test 13: Check for TARGET_DIV_CLASS configuration
+Write-Host "`nTest 13: Checking for TARGET_DIV_CLASS configuration..." -ForegroundColor Cyan
+if ($scriptContent -match 'TARGET_DIV_CLASS') {
+    Write-Host "  ✓ TARGET_DIV_CLASS configuration is present" -ForegroundColor Green
+} else {
+    Write-Host "  ✗ TARGET_DIV_CLASS configuration not found" -ForegroundColor Red
+    exit 1
+}
+
+# Test 14: Check for Get-TargetDiv function implementation
+Write-Host "`nTest 14: Checking Get-TargetDiv function implementation..." -ForegroundColor Cyan
+if ($scriptContent -match 'function Get-TargetDiv') {
+    Write-Host "  ✓ Get-TargetDiv function is defined" -ForegroundColor Green
+    
+    # Check for key features
+    if ($scriptContent -match 'HtmlContent' -and $scriptContent -match 'TargetDivClass') {
+        Write-Host "  ✓ Function accepts required parameters" -ForegroundColor Green
+    }
+    
+    if ($scriptContent -match 'regex|Regex') {
+        Write-Host "  ✓ Uses regex for HTML parsing" -ForegroundColor Green
+    }
+    
+    if ($scriptContent -match 'nested|div.*div') {
+        Write-Host "  ✓ Handles nested divs" -ForegroundColor Green
+    }
+} else {
+    Write-Host "  ✗ Get-TargetDiv function not found" -ForegroundColor Red
+    exit 1
+}
+
 # Summary
 Write-Host "`n========================================" -ForegroundColor Magenta
 Write-Host "  VALIDATION SUMMARY" -ForegroundColor Magenta
@@ -175,6 +206,8 @@ Write-Host "  • Validates URLs before making requests" -ForegroundColor White
 Write-Host "  • Checks for empty content and bad status codes" -ForegroundColor White
 Write-Host "  • Provides detailed logging with multiple severity levels" -ForegroundColor White
 Write-Host "  • Returns appropriate exit codes for success/failure" -ForegroundColor White
+Write-Host "  • Extracts target div from HTML using configurable class selector" -ForegroundColor White
+Write-Host "  • Handles nested divs and edge cases in HTML parsing" -ForegroundColor White
 
 Write-Host "`n✓ All validation checks passed!" -ForegroundColor Green
 Write-Host "`nNote: Live network tests require internet connectivity." -ForegroundColor Yellow

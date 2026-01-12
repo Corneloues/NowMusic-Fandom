@@ -33,12 +33,19 @@ param(
     [string]$SourceUrl,
     
     [Parameter(Mandatory=$false)]
-    [int]$TimeoutSeconds
+    [int]$TimeoutSeconds,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$TargetDivClass
 )
 
 # Set strict mode for better error detection
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# Configuration - Target div class for extraction
+# This can be overridden by the -TargetDivClass parameter or TARGET_DIV_CLASS environment variable
+$script:TARGET_DIV_CLASS = "mw-content-ltr mw-parser-output"
 
 function Write-Log {
     <#
@@ -177,6 +184,148 @@ function Get-HtmlContent {
     return $result
 }
 
+function Get-TargetDiv {
+    <#
+    .SYNOPSIS
+        Extracts a specific div from HTML content based on class name.
+    
+    .DESCRIPTION
+        Parses HTML content and extracts the div element with the specified class.
+        Uses regex-based parsing for reliability with potentially malformed HTML.
+        Implements comprehensive error handling for missing elements and edge cases.
+    
+    .PARAMETER HtmlContent
+        The HTML content to parse.
+    
+    .PARAMETER TargetDivClass
+        The class name of the div to extract. Can contain multiple classes separated by spaces.
+    
+    .OUTPUTS
+        PSCustomObject with properties: Success (bool), Content (string), Error (string)
+    
+    .EXAMPLE
+        Get-TargetDiv -HtmlContent $html -TargetDivClass "mw-content-ltr mw-parser-output"
+    #>
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$HtmlContent,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$TargetDivClass
+    )
+    
+    Write-Log "Attempting to extract div with class: $TargetDivClass" -Level Info
+    
+    # Initialize result object
+    $result = [PSCustomObject]@{
+        Success = $false
+        Content = $null
+        Error = $null
+    }
+    
+    try {
+        # Validate input
+        if ([string]::IsNullOrWhiteSpace($HtmlContent)) {
+            throw "HTML content is empty or null"
+        }
+        
+        if ([string]::IsNullOrWhiteSpace($TargetDivClass)) {
+            throw "Target div class is empty or null"
+        }
+        
+        Write-Log "HTML content size: $($HtmlContent.Length) characters" -Level Info
+        
+        # Escape special regex characters in class names
+        $escapedClasses = ($TargetDivClass -split '\s+') | ForEach-Object { [regex]::Escape($_) }
+        
+        # Build a regex pattern that matches a div with all specified classes
+        # This pattern allows classes in any order and additional classes
+        $classPatterns = $escapedClasses | ForEach-Object { "(?=.*\b$_\b)" }
+        $classPattern = ($classPatterns -join '') + '.*?'
+        
+        # Pattern to match the opening div tag with the target classes
+        # This matches: <div class="..." where the class attribute contains all target classes
+        $openDivPattern = '<div\s+' + '[^>]*' + 'class\s*=\s*' + '["' + "']" + $classPattern + '["' + "']" + '[^>]*>'
+        
+        Write-Log "Searching for div with regex pattern" -Level Info
+        
+        # Find all opening div tags that match
+        $matches = [regex]::Matches($HtmlContent, $openDivPattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+        
+        if ($matches.Count -eq 0) {
+            throw "No div found with class: $TargetDivClass"
+        }
+        
+        if ($matches.Count -gt 1) {
+            Write-Log "Warning: Found $($matches.Count) divs with the target class. Extracting the first one." -Level Warning
+        }
+        
+        # Get the position of the first match
+        $startPos = $matches[0].Index
+        $openingTag = $matches[0].Value
+        
+        Write-Log "Found opening div tag at position $startPos" -Level Info
+        
+        # Now we need to find the matching closing </div> tag
+        # We'll count opening and closing div tags to handle nested divs
+        $divCount = 1
+        $currentPos = $startPos + $openingTag.Length
+        $endPos = -1
+        
+        # Scan through the HTML to find the matching closing tag
+        while ($currentPos -lt $HtmlContent.Length -and $divCount -gt 0) {
+            # Look for next div tag (opening or closing)
+            $nextOpenDiv = $HtmlContent.IndexOf('<div', $currentPos, [System.StringComparison]::OrdinalIgnoreCase)
+            $nextCloseDiv = $HtmlContent.IndexOf('</div>', $currentPos, [System.StringComparison]::OrdinalIgnoreCase)
+            
+            # If no more closing divs found, the HTML is malformed
+            if ($nextCloseDiv -eq -1) {
+                throw "Malformed HTML: No matching closing </div> tag found"
+            }
+            
+            # Determine which comes first
+            if ($nextOpenDiv -ne -1 -and $nextOpenDiv -lt $nextCloseDiv) {
+                # Found another opening div before the closing one
+                $divCount++
+                $currentPos = $nextOpenDiv + 4  # Move past '<div'
+            } else {
+                # Found a closing div
+                $divCount--
+                if ($divCount -eq 0) {
+                    # This is our matching closing tag
+                    $endPos = $nextCloseDiv + 6  # Include '</div>'
+                } else {
+                    $currentPos = $nextCloseDiv + 6  # Move past '</div>'
+                }
+            }
+        }
+        
+        if ($endPos -eq -1) {
+            throw "Could not find matching closing tag for div"
+        }
+        
+        # Extract the div content
+        $divContent = $HtmlContent.Substring($startPos, $endPos - $startPos)
+        
+        # Validate extracted content
+        if ([string]::IsNullOrWhiteSpace($divContent)) {
+            throw "Extracted div content is empty"
+        }
+        
+        Write-Log "Successfully extracted div. Size: $($divContent.Length) characters" -Level Success
+        
+        $result.Success = $true
+        $result.Content = $divContent
+        
+    } catch {
+        $errorMessage = "Error extracting div: $($_.Exception.Message)"
+        $result.Error = $errorMessage
+        Write-Log $errorMessage -Level Error
+    }
+    
+    return $result
+}
+
 # Main execution block
 try {
     Write-Log "=== HTML Content Fetcher Started ===" -Level Info
@@ -207,6 +356,19 @@ try {
     # Validate timeout value
     if ($TimeoutSeconds -le 0) {
         throw "TIMEOUT_SECONDS must be a positive integer. Got: $TimeoutSeconds"
+    }
+    
+    # Get TargetDivClass from parameter, environment variable, or use default
+    if ([string]::IsNullOrWhiteSpace($TargetDivClass)) {
+        if ($env:TARGET_DIV_CLASS) {
+            $TargetDivClass = $env:TARGET_DIV_CLASS
+            Write-Log "Using TARGET_DIV_CLASS from environment variable" -Level Info
+        } else {
+            $TargetDivClass = $script:TARGET_DIV_CLASS
+            Write-Log "Using default TARGET_DIV_CLASS: $TargetDivClass" -Level Info
+        }
+    } else {
+        Write-Log "Using TARGET_DIV_CLASS from parameter" -Level Info
     }
     
     # Fetch the HTML content

@@ -44,6 +44,7 @@ jobs:
         env:
           SOURCE_URL: ${{ github.event.inputs.source_url || vars.SOURCE_URL || 'https://en.wikipedia.org/wiki/Music' }}
           TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || vars.TIMEOUT_SECONDS || '30' }}
+          TARGET_DIV_CLASS: ${{ vars.TARGET_DIV_CLASS || 'mw-content-ltr mw-parser-output' }}
         run: |
           ./Fetch-HtmlContent.ps1
       
